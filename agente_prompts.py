@@ -1,8 +1,8 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 
-# Configurar sua API Key da OpenAI
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+# Inicializar o cliente da OpenAI com a API Key
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def gerar_prompts_por_nivel(tema):
     niveis = {
@@ -22,7 +22,7 @@ def gerar_prompts_por_nivel(tema):
 
     resultados = {}
     for nivel, instrucoes in niveis.items():
-        resposta = openai.ChatCompletion.create(
+        resposta = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "Você é um especialista em engenharia de prompts."},
@@ -43,11 +43,13 @@ if st.button("Gerar Prompts"):
         st.warning("Digite um tema antes de gerar.")
     else:
         st.info("Gerando prompts, aguarde...")
-        resultados = gerar_prompts_por_nivel(tema)
-        for nivel in range(1, 7):
-            cor = "#38b000" if nivel == 6 else "#1f77b4"
-            st.markdown(f"### 🎯 Nível {nivel} de complexidade")
-            st.code(resultados[nivel], language="markdown")
-            if nivel == 6:
-                st.markdown(f"🟢 **Avaliação:** Nota **10/10** – Prompt de excelência.")
-      
+        try:
+            resultados = gerar_prompts_por_nivel(tema)
+            for nivel in range(1, 7):
+                cor = "#38b000" if nivel == 6 else "#1f77b4"
+                st.markdown(f"### 🎯 Nível {nivel} de complexidade")
+                st.code(resultados[nivel], language="markdown")
+                if nivel == 6:
+                    st.markdown(f"🟢 **Avaliação:** Nota **10/10** – Prompt de excelência.")
+        except Exception as e:
+            st.error(f"Erro ao gerar prompts: {e}")
