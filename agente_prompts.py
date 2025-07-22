@@ -1,7 +1,7 @@
 import streamlit as st
 from openai import OpenAI
 
-# Inicializar o cliente da OpenAI com a API Key
+# Inicializa o cliente da OpenAI com a chave da API do Streamlit Secrets
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 def gerar_prompts_por_nivel(tema):
@@ -11,29 +11,45 @@ def gerar_prompts_por_nivel(tema):
         3: f"Crie um prompt com parâmetros específicos para o tema: {tema}.",
         4: f"Crie um prompt com exemplos ou estilo desejado sobre: {tema}.",
         5: f"Crie um prompt com contexto, público e objetivo claros sobre: {tema}.",
-        6: f"Crie um prompt nota 10, no mais alto nível de engenharia, sobre: {tema}. O prompt deve:\n"
-           "- Instruir o modelo a agir como um especialista no assunto\n"
-           "- Definir claramente o público-alvo\n"
-           "- Definir estrutura, tom e formato da resposta\n"
-           "- Incluir restrições ou objetivos específicos\n"
-           "- Ser otimizado para performance máxima\n"
-           "- Estimular criatividade, profundidade e utilidade"
+        6: f"""Crie um prompt nota 10, no mais alto nível de engenharia, sobre: {tema}. O prompt deve:
+- Instruir o modelo a agir como um especialista no assunto
+- Definir claramente o público-alvo
+- Definir estrutura, tom e formato da resposta
+- Incluir restrições ou objetivos específicos
+- Ser otimizado para performance máxima
+- Estimular criatividade, profundidade e utilidade"""
     }
 
     resultados = {}
     for nivel, instrucoes in niveis.items():
-        resposta = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "Você é um especialista em engenharia de prompts."},
-                {"role": "user", "content": instrucoes}
-            ],
-            temperature=0.8
-        )
+        modelo = "gpt-4"  # tenta usar GPT-4
+        try:
+            resposta = client.chat.completions.create(
+                model=modelo,
+                messages=[
+                    {"role": "system", "content": "Você é um especialista em engenharia de prompts."},
+                    {"role": "user", "content": instrucoes}
+                ],
+                temperature=0.8
+            )
+        except Exception as e:
+            if "model_not_found" in str(e) or "does not exist" in str(e):
+                modelo = "gpt-3.5-turbo"  # fallback automático
+                resposta = client.chat.completions.create(
+                    model=modelo,
+                    messages=[
+                        {"role": "system", "content": "Você é um especialista em engenharia de prompts."},
+                        {"role": "user", "content": instrucoes}
+                    ],
+                    temperature=0.8
+                )
+            else:
+                raise e
         resultados[nivel] = resposta.choices[0].message.content.strip()
 
     return resultados
 
+# Interface Streamlit
 st.set_page_config(page_title="Agente Neural de Prompts", layout="wide")
 st.title("🤖 Agente Neural: Geração de Prompts em 6 Níveis")
 tema = st.text_input("Digite o tema-base do prompt:")
